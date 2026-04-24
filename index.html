@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ImDG 목재포장 계산기</title>
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --card: #FFFFFF;
+    --border: #E0DDD6;
+    --accent: #2C5F2E;
+    --accent-light: #E8F0E8;
+    --text: #1A1A18;
+    --text2: #5F5E5A;
+    --text3: #9A9890;
+    --wood: #C8A055;
+    --wood-light: #F0E4C8;
+    --danger: #C0392B;
+    --radius: 10px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* 헤더 */
+  .header { background: var(--accent); padding: 14px 16px 12px; position: sticky; top: 0; z-index: 100; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.12em; }
+  .title { font-size: 17px; font-weight: 700; color: #fff; }
+  .print-btn-top { font-size: 12px; padding: 5px 12px; background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 6px; cursor: pointer; display: none; }
+  .print-btn-top.show { display: block; }
+
+  .wrap { padding: 14px 14px 40px; max-width: 480px; margin: 0 auto; }
+
+  /* 유형 선택 */
+  .section-label { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .type-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; margin-bottom: 16px; }
+  .type-btn { padding: 10px 4px; background: var(--card); border: 1.5px solid var(--border); border-radius: var(--radius); font-size: 12px; font-weight: 600; color: var(--text2); cursor: pointer; text-align: center; line-height: 1.3; transition: all 0.15s; }
+  .type-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+  .type-btn:active { transform: scale(0.96); }
+
+  /* 입력 */
+  .input-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
+  .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .input-group { display: flex; flex-direction: column; gap: 4px; }
+  .input-group label { font-size: 11px; font-weight: 700; color: var(--text3); }
+  .input-group input {
+    width: 100%; padding: 10px 12px; font-size: 18px; font-weight: 600;
+    border: 1.5px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text);
+    -webkit-appearance: none; appearance: none;
+  }
+  .input-group input:focus { outline: none; border-color: var(--accent); background: #fff; }
+  .input-group .unit { font-size: 11px; color: var(--text3); text-align: right; margin-top: 2px; }
+
+  /* 계산 버튼 */
+  .calc-btn {
+    width: 100%; padding: 15px; font-size: 16px; font-weight: 700;
+    background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius); cursor: pointer; margin-bottom: 16px;
+    letter-spacing: 0.04em; transition: opacity 0.15s;
+  }
+  .calc-btn:active { opacity: 0.85; transform: scale(0.98); }
+
+  /* 결과 */
+  .result-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-bottom: 12px; display: none; }
+  .result-card.show { display: block; }
+
+  .result-header { background: var(--accent); padding: 10px 14px; }
+  .result-header .rtitle { font-size: 13px; font-weight: 700; color: #fff; }
+  .result-header .rsize { font-size: 11px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+
+  /* 외부치수 */
+  .dim-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); }
+  .dim-cell { background: var(--wood-light); padding: 10px 8px; text-align: center; }
+  .dim-cell .dl { font-size: 10px; color: var(--text3); font-weight: 700; }
+  .dim-cell .dv { font-size: 18px; font-weight: 700; color: var(--accent); }
+  .dim-cell .du { font-size: 10px; color: var(--text3); }
+
+  /* 절단표 */
+  .cut-section { padding: 12px 14px 0; }
+  .cut-title { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.08em; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+  .cut-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+  .cut-table th { font-size: 10px; font-weight: 700; color: var(--text3); padding: 4px 6px; text-align: left; border-bottom: 1.5px solid var(--border); }
+  .cut-table th:last-child { text-align: right; }
+  .cut-table td { font-size: 13px; padding: 7px 6px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .cut-table td:last-child { text-align: right; font-weight: 700; color: var(--accent); font-size: 15px; }
+  .cut-table tr:last-child td { border-bottom: none; }
+  .spec-badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; background: var(--wood-light); color: #7A5520; }
+  .spec-badge.ply { background: #E8F0E8; color: var(--accent); }
+  .cut-name { font-size: 13px; color: var(--text); }
+  .cut-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .cut-len { font-size: 14px; font-weight: 700; color: var(--text); }
+  .cut-len-sub { font-size: 11px; color: var(--text3); }
+
+  /* 인쇄 버튼 */
+  .print-area { padding: 0 14px 14px; }
+  .print-btn { width: 100%; padding: 12px; font-size: 14px; font-weight: 700; background: var(--bg); color: var(--accent); border: 1.5px solid var(--accent); border-radius: var(--radius); cursor: pointer; }
+  .print-btn:active { background: var(--accent-light); }
+
+  /* 높이 필드 토글 */
+  .h-field { display: none; }
+  .h-field.show { display: flex; }
+
+  /* 인쇄 스타일 */
+  @media print {
+    body { background: #fff; }
+    .header, .type-grid, .input-card, .calc-btn, .print-area, .section-label:first-of-type { display: none !important; }
+    .result-card { display: block !important; box-shadow: none; border: 1px solid #ccc; }
+    .result-card.show { display: block !important; }
+    .wrap { padding: 0; }
+    .print-btn-top { display: none !important; }
+    @page { margin: 10mm; size: A6; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="logo">ImDG</div>
+      <div class="title">목재포장 계산기</div>
+    </div>
+    <button class="print-btn-top" id="printTopBtn" onclick="window.print()">인쇄</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 유형 선택 -->
+  <div class="section-label">포장 유형</div>
+  <div class="type-grid">
+    <button class="type-btn active" onclick="setType('pallet_normal',this)">팔레트<br>일반</button>
+    <button class="type-btn" onclick="setType('pallet_block',this)">팔레트<br>블록</button>
+    <button class="type-btn" onclick="setType('skid',this)">SKID</button>
+    <button class="type-btn" onclick="setType('box_normal',this)">목상자<br>일반</button>
+    <button class="type-btn" onclick="setType('box_narrow',this)">목상자<br>가로폭축소</button>
+    <button class="type-btn" onclick="setType('box_lid',this)">목상자<br>맞뚜껑</button>
+  </div>
+
+  <!-- 입력 -->
+  <div class="section-label">치수 입력 (mm)</div>
+  <div class="input-card">
+    <div class="input-grid">
+      <div class="input-group">
+        <label>가로 W</label>
+        <input type="number" id="iW" inputmode="numeric" placeholder="0" value="">
+        <div class="unit">mm</div>
+      </div>
+      <div class="input-group">
+        <label>세로 D</label>
+        <input type="number" id="iD" inputmode="numeric" placeholder="0" value="">
+        <div class="unit">mm</div>
+      </div>
+      <div class="input-group h-field" id="hField">
+        <label>높이 H</label>
+        <input type="number" id="iH" inputmode="numeric" placeholder="0" value="">
+        <div class="unit">mm</div>
+      </div>
+      <div class="input-group">
+        <label>수량</label>
+        <input type="number" id="iQ" inputmode="numeric" placeholder="1" value="1">
+        <div class="unit">개</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="calc-btn" onclick="calc()">절단표 계산</button>
+
+  <!-- 결과 -->
+  <div class="result-card" id="result">
+    <div class="result-header">
+      <div class="rtitle" id="rTitle">—</div>
+      <div class="rsize" id="rSize">—</div>
+    </div>
+    <div class="dim-row">
+      <div class="dim-cell"><div class="dl">가로</div><div class="dv" id="dW">—</div><div class="du">mm</div></div>
+      <div class="dim-cell"><div class="dl">세로</div><div class="dv" id="dD">—</div><div class="du">mm</div></div>
+      <div class="dim-cell"><div class="dl">높이</div><div class="dv" id="dH">—</div><div class="du">mm</div></div>
+    </div>
+    <div id="cutBody"></div>
+    <div class="print-area">
+      <button class="print-btn" onclick="window.print()">인쇄 / 프린터 출력</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var curType = 'pallet_normal';
+
+function setType(t, btn) {
+  curType = t;
+  document.querySelectorAll('.type-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  var needH = (t === 'skid' || t === 'box_normal' || t === 'box_narrow' || t === 'box_lid');
+  document.getElementById('hField').classList.toggle('show', needH);
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('printTopBtn').classList.remove('show');
+}
+
+function r(v) { return Math.round(v); }
+
+function excelRound(n) { return Math.floor(n + 0.5); }
+
+// ── 계산 엔진 ──
+function calcPalletNormal(W, D, Q) {
+  var slatCnt = (D<=500?4 : D<=700?5 : D<=900?7 : D<=1100?9 : D<=1300?11 : 13) * Q;
+  var blkCnt  = (W<=500?2 : W<=1200?3 : 4) * Q;
+  return {
+    oW: r(W), oD: r(D), oH: '—',
+    sections: [
+      { title: '각재', rows: [
+        { badge:'각재', spec:'21×75 상판', len: r(W)+'mm', cnt: slatCnt },
+        { badge:'각재', spec:'60×90 블록', len: r(D)+'mm', cnt: blkCnt },
+      ]}
+    ]
+  };
+}
+
+function calcPalletBlock(W, D, Q) {
+  var slatCnt = (D<=500?4 : D<=700?5 : D<=900?7 : D<=1100?9 : D<=1300?11 : 13) * Q;
+  var blkTopCnt = (W<=500?2 : W<=1200?3 : 4) * Q;
+  var blkCnt = (blkTopCnt/Q===2?6 : blkTopCnt/Q===3?9 : 12) * Q;
+  return {
+    oW: r(W), oD: r(D), oH: '—',
+    sections: [
+      { title: '각재', rows: [
+        { badge:'각재', spec:'21×75 상판', len: r(W)+'mm', cnt: slatCnt },
+        { badge:'각재', spec:'21×75 블록상판', len: r(D)+'mm', cnt: blkTopCnt },
+        { badge:'각재', spec:'90×90 블록', len: '75mm', cnt: blkCnt },
+        { badge:'각재', spec:'21×75 블록하판', len: r(D)+'mm', cnt: blkTopCnt },
+      ]}
+    ]
+  };
+}
+
+function calcSkid(W, D, H, Q) {
+  var c1 = (W<=2000?3 : W<=3000?4 : 5) * Q;
+  var c2 = (D<=1500?3 : D<=2000?4 : D<=3000?5 : 6) * Q;
+  var c3 = (excelRound(W/400) + 4) * Q;
+  return {
+    oW: r(W), oD: r(D), oH: H>0?r(H):'—',
+    sections: [
+      { title: '각재', rows: [
+        { badge:'각재', spec:'90×90 1단 (세로런너)', len: r(D)+'mm', cnt: c1 },
+        { badge:'각재', spec:'90×90 2단 (가로빔)', len: r(W)+'mm', cnt: c2 },
+        { badge:'각재', spec:'90×60 3단 (상판)', len: r(D)+'mm', cnt: c3, note:'* 최소 400mm 간격 유지' },
+      ]}
+    ]
+  };
+}
+
+function calcBoxNormal(W, D, H, Q) {
+  var J3=21, K3=45, L3=4.6, M3=7.5, N3=45, O3=45, I3=90;
+  var G8 = W+O3*2, H8 = D+O3*2, I8 = H+N3;
+  var J8 = (H8<=1000?3 : H8<=1300?4 : H8<=1700?5 : 6)*Q;
+  var L8 = (G8<=800?2 : G8<=1500?3 : 4)*Q;
+  var M8 = H8+J3*2+L3*2;
+  var AE8 = G8+J3*2+L3*2;
+  var AF8 = I8+L3+J3;
+  var AH8 = H8, AI8 = AF8;
+  // 띠
+  var N8=4*Q, O8=AE8;
+  var P8=4*Q, Q8=AF8-K3*2;
+  var T8=(AE8<=700?0 : AE8<=1300?1 : 2)*Q;
+  var R8=T8>0?0:(AF8<=700?0:1)*Q;
+  var U8=AF8-K3*2, S8=AE8-K3*2;
+  var V8=4*Q, W8=AH8;
+  var X8=4*Q, Y8=AI8-K3*2;
+  var AB8=(AH8<=700?0 : AH8<=1300?1 : 2)*Q;
+  var Z8=AB8>0?0:(AI8<=700?0:1)*Q;
+  var AA8=AH8-K3*2, AC8=AI8-K3*2;
+  // 합판
+  var AK8=G8, AL8=H8;
+  var AN8=AK8+J3*2+L3*2, AO8=AL8+J3*2+L3*2;
+  var oW=r(AN8), oD=r(AO8), oH=r(AF8+I3+M3);
+
+  var tieRows = [];
+  tieRows.push({ badge:'각재', spec:'21×45 가로면 가로띠', len:r(O8)+'mm', cnt:N8 });
+  tieRows.push({ badge:'각재', spec:'21×45 가로면 세로띠', len:r(Q8)+'mm', cnt:P8 });
+  if(T8>0) tieRows.push({ badge:'각재', spec:'21×45 가로면 중간 세로띠', len:r(U8)+'mm', cnt:T8 });
+  if(R8>0) tieRows.push({ badge:'각재', spec:'21×45 가로면 중간 가로띠', len:r(S8)+'mm', cnt:R8 });
+  tieRows.push({ badge:'각재', spec:'21×45 세로면 가로띠', len:r(W8)+'mm', cnt:V8 });
+  tieRows.push({ badge:'각재', spec:'21×45 세로면 세로띠', len:r(Y8)+'mm', cnt:X8 });
+  if(AB8>0) tieRows.push({ badge:'각재', spec:'21×45 세로면 중간 세로띠', len:r(AC8)+'mm', cnt:AB8 });
+  if(Z8>0)  tieRows.push({ badge:'각재', spec:'21×45 세로면 중간 가로띠', len:r(AA8)+'mm', cnt:Z8 });
+  tieRows.push({ badge:'각재', spec:'90×45 상부고정', len:r(H8)+'mm', cnt:1*Q });
+
+  return {
+    oW:oW, oD:oD, oH:oH,
+    sections: [
+      { title: '각재', rows: [
+        { badge:'각재', spec:'21×75 상판', len:r(G8)+'mm', cnt:J8 },
+        { badge:'각재', spec:'60×90 블록', len:r(M8)+'mm', cnt:L8 },
+      ]},
+      { title: '띠 (21×45)', rows: tieRows },
+      { title: '합판', rows: [
+        { badge:'합판', spec:'합판A 4.6 가로면', len:r(AE8)+'×'+r(AF8)+'mm', cnt:'×'+(2*Q) },
+        { badge:'합판', spec:'합판A 4.6 세로면', len:r(AH8)+'×'+r(AI8)+'mm', cnt:'×'+(2*Q) },
+        { badge:'합판', spec:'합판A 4.6 바닥',   len:r(AK8)+'×'+r(AL8)+'mm', cnt:'×'+(1*Q) },
+        { badge:'합판', spec:'합판B 7.5 뚜껑',   len:r(AN8)+'×'+r(AO8)+'mm', cnt:'×'+(1*Q) },
+      ]}
+    ]
+  };
+}
+
+function calcBoxNarrow(W, D, H, Q) {
+  var J3=21, K3=45, L3=4.6, M3=7.5, N3=45, O3=45, I3=90;
+  var G8=W, H8=D+O3*2, I8=H+N3;
+  var J8=(H8<=1000?3:H8<=1300?4:H8<=1700?5:6)*Q;
+  var L8=(G8<=800?2:G8<=1500?3:4)*Q;
+  var M8=H8+J3*2+L3*2;
+  var AE8=G8; // 핵심: 가로는 그대로
+  var AF8=I8+L3+J3;
+  var AH8=H8+J3*2+L3*2; // 세로는 포함
+  var AI8=I8+L3+J3+60;  // +60
+  var N8=4*Q, O8=AE8;
+  var P8=4*Q, Q8=AF8-K3*2;
+  var T8=(AE8<=700?0:AE8<=1300?1:2)*Q;
+  var R8=T8>0?0:(AF8<=700?0:1)*Q;
+  var U8=AF8-K3*2, S8=AE8-K3*2;
+  var V8=4*Q, W8=AH8;
+  var X8=4*Q, Y8=AI8-K3*2;
+  var AB8=(AH8<=700?0:AH8<=1300?1:2)*Q;
+  var Z8=AB8>0?0:(AI8<=700?0:1)*Q;
+  var AA8=AH8-K3*2, AC8=AI8-K3*2;
+  var AK8=G8, AL8=H8;
+  var AN8=AK8+J3*2+L3*2, AO8=AL8+J3*2+L3*2;
+  var oW=r(AN8), oD=r(AO8), oH=r(AF8+I3+M3);
+
+  var tieRows=[];
+  tieRows.push({ badge:'각재', spec:'21×47 가로면 가로띠', len:r(O8)+'mm', cnt:N8 });
+  tieRows.push({ badge:'각재', spec:'21×47 가로면 세로띠', len:r(Q8)+'mm', cnt:P8 });
+  if(T8>0) tieRows.push({ badge:'각재', spec:'21×47 가로면 중간 세로띠', len:r(U8)+'mm', cnt:T8 });
+  if(R8>0) tieRows.push({ badge:'각재', spec:'21×47 가로면 중간 가로띠', len:r(S8)+'mm', cnt:R8 });
+  tieRows.push({ badge:'각재', spec:'21×47 세로면 가로띠', len:r(W8)+'mm', cnt:V8 });
+  tieRows.push({ badge:'각재', spec:'21×47 세로면 세로띠', len:r(Y8)+'mm', cnt:X8 });
+  if(AB8>0) tieRows.push({ badge:'각재', spec:'21×47 세로면 중간 세로띠', len:r(AC8)+'mm', cnt:AB8 });
+  if(Z8>0)  tieRows.push({ badge:'각재', spec:'21×47 세로면 중간 가로띠', len:r(AA8)+'mm', cnt:Z8 });
+  tieRows.push({ badge:'각재', spec:'90×45 상부고정', len:r(H8)+'mm', cnt:1*Q });
+
+  return {
+    oW:oW, oD:oD, oH:oH,
+    sections: [
+      { title:'각재', rows:[
+        { badge:'각재', spec:'21×75 상판', len:r(G8)+'mm', cnt:J8 },
+        { badge:'각재', spec:'60×90 블록', len:r(M8)+'mm', cnt:L8 },
+      ]},
+      { title:'띠 (21×47)', rows: tieRows },
+      { title:'합판', rows:[
+        { badge:'합판', spec:'합판A 4.6 가로면', len:r(AE8)+'×'+r(AF8)+'mm', cnt:'×'+(2*Q) },
+        { badge:'합판', spec:'합판A 4.6 세로면', len:r(AH8)+'×'+r(AI8)+'mm', cnt:'×'+(2*Q) },
+        { badge:'합판', spec:'합판A 4.6 바닥',   len:r(AK8)+'×'+r(AL8)+'mm', cnt:'×'+(1*Q) },
+        { badge:'합판', spec:'합판B 7.5 뚜껑',   len:r(AN8)+'×'+r(AO8)+'mm', cnt:'×'+(1*Q) },
+      ]}
+    ]
+  };
+}
+
+function calcBoxLid(W, D, H, Q) {
+  var J3=21, K3=45, L3=4.6, M3=7.5, N3=45, O3=45;
+  var G8=W, H8=D, I8=H+N3;
+  var L8=(G8<=800?2:G8<=1500?3:4)*Q;
+  var M8=H8+J3*2+L3*2;
+  var AE8=G8+J3*2+L3*2;
+  var AF8=I8, AH8=H8, AI8=I8;
+  var N8=4*Q, O8=AE8;
+  var P8=4*Q, Q8=AF8-K3*2;
+  var T8=(AE8<=700?0:AE8<=1300?1:2)*Q;
+  var R8=T8>0?0:(AF8<=700?0:1)*Q;
+  var U8=AF8-K3*2, S8=AE8-K3*2;
+  var V8=4*Q, W8=AH8;
+  var X8=4*Q, Y8=AI8-K3*2;
+  var AB8=(AH8<=700?0:AH8<=1300?1:2)*Q;
+  var Z8=AB8>0?0:(AI8<=700?0:1)*Q;
+  var AA8=AH8-K3*2, AC8=AI8-K3*2;
+  var AK8=G8+J3*2+L3*2, AL8=H8+J3*2+L3*2;
+  var oW=r(AK8), oD=r(AL8), oH=r(AF8+M3*2+60);
+
+  var tieRows=[];
+  tieRows.push({ badge:'각재', spec:'21×45 가로면 가로띠', len:r(O8)+'mm', cnt:N8 });
+  tieRows.push({ badge:'각재', spec:'21×45 가로면 세로띠', len:r(Q8)+'mm', cnt:P8 });
+  if(T8>0) tieRows.push({ badge:'각재', spec:'21×45 가로면 중간 세로띠', len:r(U8)+'mm', cnt:T8 });
+  if(R8>0) tieRows.push({ badge:'각재', spec:'21×45 가로면 중간 가로띠', len:r(S8)+'mm', cnt:R8 });
+  tieRows.push({ badge:'각재', spec:'21×45 세로면 가로띠', len:r(W8)+'mm', cnt:V8 });
+  tieRows.push({ badge:'각재', spec:'21×45 세로면 세로띠', len:r(Y8)+'mm', cnt:X8 });
+  if(AB8>0) tieRows.push({ badge:'각재', spec:'21×45 세로면 중간 세로띠', len:r(AC8)+'mm', cnt:AB8 });
+  if(Z8>0)  tieRows.push({ badge:'각재', spec:'21×45 세로면 중간 가로띠', len:r(AA8)+'mm', cnt:Z8 });
+  tieRows.push({ badge:'각재', spec:'90×45 상부고정', len:r(H8)+'mm', cnt:1*Q });
+
+  return {
+    oW:oW, oD:oD, oH:oH,
+    sections:[
+      { title:'각재', rows:[
+        { badge:'각재', spec:'90×60 블록', len:r(M8)+'mm', cnt:L8 },
+      ]},
+      { title:'띠 (21×45)', rows: tieRows },
+      { title:'합판', rows:[
+        { badge:'합판', spec:'합판A 4.6 가로면', len:r(AE8)+'×'+r(AF8)+'mm', cnt:'×'+(2*Q) },
+        { badge:'합판', spec:'합판A 4.6 세로면', len:r(AH8)+'×'+r(AI8)+'mm', cnt:'×'+(2*Q) },
+        { badge:'합판', spec:'합판B 7.5 몸통뚜껑', len:r(AK8)+'×'+r(AL8)+'mm', cnt:'×'+(1*Q) },
+        { badge:'합판', spec:'합판B 7.5 덮개뚜껑', len:r(AK8)+'×'+r(AL8)+'mm', cnt:'×'+(1*Q) },
+      ]}
+    ]
+  };
+}
+
+// ── 계산 실행 ──
+function calc() {
+  var W = parseFloat(document.getElementById('iW').value)||0;
+  var D = parseFloat(document.getElementById('iD').value)||0;
+  var H = parseFloat(document.getElementById('iH').value)||0;
+  var Q = parseInt(document.getElementById('iQ').value)||1;
+  if(W<=0||D<=0){ alert('가로/세로를 입력해주세요.'); return; }
+
+  var typeNames = {
+    pallet_normal:'팔레트 (일반형)', pallet_block:'팔레트 (블록형)',
+    skid:'팔레트 SKID', box_normal:'목상자 (일반)',
+    box_narrow:'목상자 (가로폭축소)', box_lid:'목상자 (맞뚜껑)'
+  };
+
+  var res;
+  if(curType==='pallet_normal') res=calcPalletNormal(W,D,Q);
+  else if(curType==='pallet_block') res=calcPalletBlock(W,D,Q);
+  else if(curType==='skid') res=calcSkid(W,D,H,Q);
+  else if(curType==='box_normal') res=calcBoxNormal(W,D,H,Q);
+  else if(curType==='box_narrow') res=calcBoxNarrow(W,D,H,Q);
+  else if(curType==='box_lid') res=calcBoxLid(W,D,H,Q);
+
+  // 헤더
+  document.getElementById('rTitle').textContent = typeNames[curType];
+  document.getElementById('rSize').textContent = '입력: '+W+' × '+D+(H?' × '+H:'')+'mm  |  수량 '+Q+'개';
+  document.getElementById('dW').textContent = res.oW;
+  document.getElementById('dD').textContent = res.oD;
+  document.getElementById('dH').textContent = res.oH;
+
+  // 절단표 렌더
+  var html = '';
+  res.sections.forEach(function(sec){
+    html += '<div class="cut-section">';
+    html += '<div class="cut-title">'+sec.title+'</div>';
+    html += '<table class="cut-table">';
+    html += '<thead><tr><th>부재</th><th>길이 / 크기</th><th>수량</th></tr></thead><tbody>';
+    sec.rows.forEach(function(row){
+      var badgeClass = row.badge==='합판' ? 'spec-badge ply' : 'spec-badge';
+      var cntStr = typeof row.cnt === 'string' ? row.cnt : (row.cnt+'개');
+      html += '<tr>';
+      html += '<td><span class="'+badgeClass+'">'+row.badge+'</span><br><span class="cut-name">'+row.spec+'</span>'+(row.note?'<br><span style="font-size:10px;color:#c0392b">'+row.note+'</span>':'')+'</td>';
+      html += '<td class="cut-len">'+row.len+'</td>';
+      html += '<td>'+cntStr+'</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  });
+
+  document.getElementById('cutBody').innerHTML = html;
+  var rc = document.getElementById('result');
+  rc.classList.add('show');
+  document.getElementById('printTopBtn').classList.add('show');
+  rc.scrollIntoView({behavior:'smooth', block:'start'});
+}
+</script>
+</body>
+</html>
